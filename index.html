@@ -3,38 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Dialer</title>
+    <title>WiFi Call App</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .phone-container { width: 360px; height: 640px; background: white; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; position: relative; border: 8px solid #333; }
-        
-        /* Header */
-        .header { padding: 20px; text-align: center; background: #fff; border-bottom: 1px solid #eee; }
-        
-        /* Display */
-        #number-display { font-size: 2rem; height: 60px; text-align: center; padding: 20px; color: #333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #e3e6ed; display: flex; justify-content: center; align-items: center; height: 100vh; }
 
-        /* Keypad */
-        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 20px; }
-        .key { width: 70px; height: 70px; border-radius: 50%; border: none; background: #f0f0f0; font-size: 1.5rem; cursor: pointer; transition: 0.2s; }
-        .key:active { background: #ddd; }
-        .call-btn { grid-column: span 3; background: #4CAF50; color: white; border-radius: 50px; height: 60px; font-weight: bold; margin-top: 10px; }
+        /* Phone Container (Desktop mode frame) */
+        .phone-container { 
+            width: 360px; 
+            height: 680px; 
+            background: #fff; 
+            border-radius: 40px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3); 
+            border: 10px solid #222; 
+            overflow: hidden; 
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
 
-        /* Responsive for Desktop */
-        @media (min-width: 1024px) {
-            body { background: #e3e6ed; }
+        /* Fast Login Overlay */
+        #login-screen {
+            position: absolute; width: 100%; height: 100%; background: white; z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;
+        }
+        #login-screen input { 
+            width: 80%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; text-align: center;
+        }
+        #login-screen button {
+            width: 80%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;
+        }
+
+        /* Header Style */
+        .header { 
+            padding: 15px; display: flex; justify-content: space-between; align-items: center; 
+            background: #fff; border-bottom: 1px solid #f0f0f0;
+        }
+        .profile-icon { width: 35px; height: 35px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .app-title { font-weight: bold; color: #333; font-size: 0.9rem; }
+
+        /* Dialer UI */
+        #number-display { 
+            flex-grow: 1; display: flex; flex-direction: column; justify-content: center; 
+            align-items: center; font-size: 2.5rem; color: #222; height: 150px;
+        }
+        .keypad { 
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 20px 40px; background: #fafafa; border-radius: 30px 30px 0 0;
+        }
+        .key { 
+            width: 70px; height: 70px; border-radius: 50%; border: none; background: #eee; 
+            font-size: 1.5rem; cursor: pointer; transition: 0.2s; 
+        }
+        .key:active { background: #ccc; transform: scale(0.9); }
+        .call-btn-container { padding: 10px 40px 30px; background: #fafafa; display: flex; justify-content: center; }
+        .call-btn { 
+            width: 70px; height: 70px; background: #4CAF50; border: none; border-radius: 50%; 
+            color: white; font-size: 1.5rem; cursor: pointer; box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        /* For Mobile Phones */
+        @media (max-width: 400px) {
+            .phone-container { width: 100vw; height: 100vh; border: none; border-radius: 0; }
         }
     </style>
 </head>
 <body>
 
 <div class="phone-container">
-    <div class="header">
-        <h3 id="user-status">Login to Start</h3>
+    <div id="login-screen">
+        <h2 style="margin-bottom: 20px;">Welcome</h2>
+        <input type="number" id="login-mobile" placeholder="Enter Mobile Number">
+        <button onclick="handleLogin()">LOGIN</button>
     </div>
 
-    <div id="number-display"></div>
+    <div class="header">
+        <div class="profile-icon">👤</div>
+        <div class="app-title">WIFI CALL APP</div>
+        <div style="width: 35px;"></div> </div>
+
+    <div id="number-display">0</div>
 
     <div class="keypad">
         <button class="key" onclick="press('1')">1</button>
@@ -49,28 +97,51 @@
         <button class="key" onclick="press('*')">*</button>
         <button class="key" onclick="press('0')">0</button>
         <button class="key" onclick="press('#')">#</button>
-        <button class="call-btn" onclick="makeCall()">CALL</button>
+    </div>
+    <div class="call-btn-container">
+        <button class="call-btn" onclick="makeCall()">📞</button>
     </div>
 </div>
 
 <script>
-    // Initialize Supabase
+    // Supabase Configuration
     const SUPABASE_URL = 'https://bqsmlubhwvmjlyowctqy.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // Use your Anon Key here
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxc21sdWJod3Ztamx5b3djdHF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NTk5NzIsImV4cCI6MjA4ODQzNTk3Mn0.rYvhWAZOhc1ZNAOJJ-DvThkCsLOCveqzXmDrZS_hdQk';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentNumber = "";
+    let myNumber = localStorage.getItem('my_number');
+
+    // Auto-Login Check
+    if (myNumber) {
+        document.getElementById('login-screen').style.display = 'none';
+        updateStatus('online');
+    }
+
+    async function handleLogin() {
+        const num = document.getElementById('login-mobile').value;
+        if (num.length < 10) return alert("Enter valid number");
+        
+        myNumber = num;
+        localStorage.setItem('my_number', num);
+        
+        // Save to Supabase
+        await _supabase.from('profiles').upsert({ mobile_number: num, status: 'online' });
+        
+        document.getElementById('login-screen').style.display = 'none';
+    }
 
     function press(num) {
+        if (currentNumber === "0") currentNumber = "";
         currentNumber += num;
         document.getElementById('number-display').innerText = currentNumber;
     }
 
     async function makeCall() {
-        if(!currentNumber) return alert("Enter a number");
-        
-        // 1. Check if user exists in Supabase
-        const { data, error } = await supabase
+        if (!currentNumber) return alert("Dial a number first");
+
+        // Check Receiver Status
+        const { data, error } = await _supabase
             .from('profiles')
             .select('status')
             .eq('mobile_number', currentNumber)
@@ -78,15 +149,27 @@
 
         if (data && data.status === 'online') {
             alert("Ringing " + currentNumber + "...");
-            // Trigger WebRTC Logic here
+            // WebRTC Logic starts here
         } else {
-            alert("User offline. Missed call notification sent.");
-            // 2. Logic to save missed call in Supabase
-            await supabase.from('missed_calls').insert([{ to_number: currentNumber, from_number: 'YOUR_NUMBER' }]);
+            alert("User is offline. Missed call logged.");
+            await _supabase.from('missed_calls').insert([
+                { from_user: myNumber, to_user: currentNumber }
+            ]);
         }
+        
         currentNumber = "";
-        document.getElementById('number-display').innerText = "";
+        document.getElementById('number-display').innerText = "0";
     }
+
+    async function updateStatus(status) {
+        if (myNumber) {
+            await _supabase.from('profiles').update({ status: status }).eq('mobile_number', myNumber);
+        }
+    }
+
+    // Go offline on close
+    window.addEventListener('beforeunload', () => updateStatus('offline'));
+
 </script>
 </body>
 </html>
