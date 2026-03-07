@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Dialer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .phone-container { width: 360px; height: 640px; background: white; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; position: relative; border: 8px solid #333; }
+        
+        /* Header */
+        .header { padding: 20px; text-align: center; background: #fff; border-bottom: 1px solid #eee; }
+        
+        /* Display */
+        #number-display { font-size: 2rem; height: 60px; text-align: center; padding: 20px; color: #333; }
+
+        /* Keypad */
+        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 20px; }
+        .key { width: 70px; height: 70px; border-radius: 50%; border: none; background: #f0f0f0; font-size: 1.5rem; cursor: pointer; transition: 0.2s; }
+        .key:active { background: #ddd; }
+        .call-btn { grid-column: span 3; background: #4CAF50; color: white; border-radius: 50px; height: 60px; font-weight: bold; margin-top: 10px; }
+
+        /* Responsive for Desktop */
+        @media (min-width: 1024px) {
+            body { background: #e3e6ed; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="phone-container">
+    <div class="header">
+        <h3 id="user-status">Login to Start</h3>
+    </div>
+
+    <div id="number-display"></div>
+
+    <div class="keypad">
+        <button class="key" onclick="press('1')">1</button>
+        <button class="key" onclick="press('2')">2</button>
+        <button class="key" onclick="press('3')">3</button>
+        <button class="key" onclick="press('4')">4</button>
+        <button class="key" onclick="press('5')">5</button>
+        <button class="key" onclick="press('6')">6</button>
+        <button class="key" onclick="press('7')">7</button>
+        <button class="key" onclick="press('8')">8</button>
+        <button class="key" onclick="press('9')">9</button>
+        <button class="key" onclick="press('*')">*</button>
+        <button class="key" onclick="press('0')">0</button>
+        <button class="key" onclick="press('#')">#</button>
+        <button class="call-btn" onclick="makeCall()">CALL</button>
+    </div>
+</div>
+
+<script>
+    // Initialize Supabase
+    const SUPABASE_URL = 'https://bqsmlubhwvmjlyowctqy.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // Use your Anon Key here
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentNumber = "";
+
+    function press(num) {
+        currentNumber += num;
+        document.getElementById('number-display').innerText = currentNumber;
+    }
+
+    async function makeCall() {
+        if(!currentNumber) return alert("Enter a number");
+        
+        // 1. Check if user exists in Supabase
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('status')
+            .eq('mobile_number', currentNumber)
+            .single();
+
+        if (data && data.status === 'online') {
+            alert("Ringing " + currentNumber + "...");
+            // Trigger WebRTC Logic here
+        } else {
+            alert("User offline. Missed call notification sent.");
+            // 2. Logic to save missed call in Supabase
+            await supabase.from('missed_calls').insert([{ to_number: currentNumber, from_number: 'YOUR_NUMBER' }]);
+        }
+        currentNumber = "";
+        document.getElementById('number-display').innerText = "";
+    }
+</script>
+</body>
+</html>
